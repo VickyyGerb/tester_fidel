@@ -5,7 +5,7 @@
   "type": "commonjs",
   "description": "Tests E2E de Fidel con Playwright (modo librería) + launcher HTML para parametrizar y correr un test por vista del sistema.",
   "scripts": {
-    "launcher": "node src/runner/server.js",
+    "launcher": "node src/runner/supervisor.js",
     "test": "node src/run-test.js",
     "postinstall": "playwright install chromium"
   },

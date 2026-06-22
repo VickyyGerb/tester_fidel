@@ -21,7 +21,8 @@ Info "Levantando launcher en http://localhost:$puerto ..."
 Start-Process "http://localhost:$puerto"
 Push-Location $RepoRoot
 try {
-  node src/runner/server.js
+  # Supervisor: relanza el server cuando 'Actualizar' pide reiniciar.
+  node src/runner/supervisor.js
 } finally {
   Pop-Location
 }

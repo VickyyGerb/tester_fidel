@@ -199,8 +199,28 @@ function correr() {
   stream("/api/run", { test, vars }, test);
 }
 
-function actualizar() {
-  stream("/api/actualizar", {}, "actualizar");
+async function actualizar() {
+  await stream("/api/actualizar", {}, "actualizar");
+  // El server se reinicia para tomar el código nuevo: esperamos que vuelva y recargamos.
+  appendLog("\nReiniciando el launcher para aplicar los cambios…\n");
+  setEstado("reiniciando…", "run");
+  await esperarServidorYRecargar();
+}
+
+async function esperarServidorYRecargar() {
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 700));
+    try {
+      const r = await fetch("/api/ping", { cache: "no-store" });
+      if (r.ok) {
+        location.reload();
+        return;
+      }
+    } catch (_) {
+      // El server todavía está abajo; seguimos esperando.
+    }
+  }
+  appendLog("El launcher no volvió solo. Reabrilo con scripts\\abrir.ps1 si hace falta.\n");
 }
 
 function guardar() {

@@ -43,7 +43,7 @@ app.get("/api/tests", (req, res) => {
 const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
 // Abre un stream SSE y vuelca stdout/stderr de un proceso hijo en vivo.
-function streamProcess(req, res, cmd, argv, env, matarAlCerrar = true) {
+function streamProcess(req, res, cmd, argv, env, matarAlCerrar = true, onDone = null) {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -58,6 +58,7 @@ function streamProcess(req, res, cmd, argv, env, matarAlCerrar = true) {
     terminado = true;
     send("done", { code });
     res.end();
+    if (onDone) onDone(code);
   };
 
   const child = spawn(cmd, argv, { env: env || process.env, cwd: ROOT });
@@ -93,9 +94,15 @@ app.post("/api/run", (req, res) => {
   streamProcess(req, res, process.execPath, [RUNNER, test], env);
 });
 
-// Traer la última versión del repo (git pull + deps).
+// Health check para que el cliente sepa cuándo el server volvió tras reiniciar.
+app.get("/api/ping", (req, res) => res.json({ ok: true }));
+
+// Traer la última versión del repo (git pull + deps) y REINICIAR el server para
+// tomar cambios de server.js (el supervisor lo relanza al salir con código 99).
 app.post("/api/actualizar", (req, res) => {
-  streamProcess(req, res, "powershell.exe", psArgs("actualizar.ps1"), null, false);
+  streamProcess(req, res, "powershell.exe", psArgs("actualizar.ps1"), null, false, () => {
+    setTimeout(() => process.exit(99), 600);
+  });
 });
 
 // Commit + push. Requiere confirmación explícita "GUARDAR" (el HTML la pide).
@@ -141,6 +148,20 @@ app.post("/api/github/conectar", (req, res) => {
 });
 
 const PORT = process.env.PORT || 4599;
-app.listen(PORT, () => {
-  console.log(`Launcher levantado en http://localhost:${PORT}`);
-});
+
+// Al reiniciar, el puerto puede tardar un instante en liberarse: reintentamos.
+function escuchar(intentos = 0) {
+  const server = app.listen(PORT, () => {
+    console.log(`Launcher levantado en http://localhost:${PORT}`);
+  });
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE" && intentos < 10) {
+      setTimeout(() => escuchar(intentos + 1), 400);
+    } else {
+      console.error("No se pudo levantar el launcher:", err.message);
+      process.exit(1);
+    }
+  });
+}
+
+escuchar();
