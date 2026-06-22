@@ -10,11 +10,13 @@ const btnRun = $("#run");
 const btnActualizar = $("#actualizar");
 const btnGuardar = $("#guardar");
 const btnConectar = $("#conectar");
+const btnDetener = $("#detener");
 const githubEstado = $("#github-estado");
 
 let tests = [];
 let corriendo = false;
 let githubOk = false;
+let abortCtl = null;
 
 function setEstado(texto, clase) {
   estado.textContent = texto;
@@ -25,6 +27,8 @@ function refrescarBotones() {
   btnRun.disabled = corriendo;
   btnActualizar.disabled = corriendo;
   btnConectar.disabled = corriendo;
+  // Detener solo tiene sentido mientras algo corre.
+  btnDetener.disabled = !corriendo;
   // Guardar requiere estar conectado a GitHub.
   btnGuardar.disabled = corriendo || !githubOk;
 }
@@ -99,39 +103,52 @@ async function stream(url, body, etiqueta) {
   setEstado("corriendo…", "run");
   appendLog(`\n──────── ${new Date().toLocaleTimeString()} · ${etiqueta} ────────\n`);
 
-  let res;
+  abortCtl = new AbortController();
   try {
-    res = await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: abortCtl.signal,
     });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sep;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const raw = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        procesarEvento(raw);
+      }
+    }
   } catch (err) {
-    appendLog("Error de red: " + err.message + "\n");
-    setEstado("error", "err");
+    if (err.name === "AbortError") {
+      appendLog("\n⏹ Detenido por el usuario.\n");
+      setEstado("detenido", "err");
+    } else {
+      appendLog("Error de red: " + err.message + "\n");
+      setEstado("error", "err");
+    }
+  } finally {
+    abortCtl = null;
     corriendo = false;
     refrescarBotones();
-    return;
   }
+}
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    let sep;
-    while ((sep = buffer.indexOf("\n\n")) !== -1) {
-      const raw = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      procesarEvento(raw);
-    }
+// Corta el test en curso: aborta la conexión y el server mata el Chromium.
+function detener() {
+  if (abortCtl) {
+    appendLog("\nDeteniendo…\n");
+    abortCtl.abort();
   }
-  corriendo = false;
-  refrescarBotones();
 }
 
 function correr() {
@@ -241,6 +258,7 @@ btnRun.addEventListener("click", correr);
 btnActualizar.addEventListener("click", actualizar);
 btnGuardar.addEventListener("click", guardar);
 btnConectar.addEventListener("click", conectar);
+btnDetener.addEventListener("click", detener);
 $("#limpiar").addEventListener("click", () => (logEl.textContent = ""));
 
 init();

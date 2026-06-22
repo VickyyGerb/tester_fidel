@@ -90,6 +90,8 @@ button {
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.secundario { background: #2a2f3a; }
+button.peligro { background: #7f1d1d; }
+button.peligro:hover:not(:disabled) { background: #991b1b; }
 
 .log-head {
   display: flex;
