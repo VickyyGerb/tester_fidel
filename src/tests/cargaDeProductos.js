@@ -3,6 +3,7 @@
 // run() arma el objeto "caso" con la MISMA forma que googleSheetsReader.js, así
 // el flujo real (referencia/cargaDeProductos) se enchufa sin reescribir nada.
 const { login } = require("../paginas/login");
+const { correrCaso } = require("../flujos/cargaProductos");
 
 const meta = {
   nombre: "Carga de Productos",
@@ -93,13 +94,16 @@ async function run({ page, vars, log }) {
     log,
   });
 
-  // TODO: portar el flujo real desde referencia/cargaDeProductos:
-  //   paginas/documents.js  -> abrir el documento (caso.documento) + cliente
-  //   componentes/productLoader.js -> cargar por cada método marcado
-  //   componentes/configApplier.js -> aplicar caso.configuraciones y verificar
-  const metodos = Object.entries(caso.probarMetodos).filter(([, v]) => v).map(([k]) => k);
-  log(`Login OK. Métodos marcados: ${metodos.join(", ")}.`);
-  log("Pendiente: portar el flujo de carga (documents/productLoader/configApplier).");
+  // Flujo real: navegar al documento, cargar por cada método, aplicar
+  // configuraciones, verificar precios y guardar.
+  const r = await correrCaso(page, caso, { confirmarGuardado: true });
+
+  log("");
+  log(`RESULTADO: ${r.exito ? "✓ OK" : "✗ con observaciones"}`);
+  log(`  Métodos cargados: ${r.tiposCarga.join(", ") || "-"}`);
+  log(`  Precio antes: ${r.precioAntes}  |  después: ${r.precioDespues}`);
+  log(`  Guardado: ${r.guardado.estado}${r.guardado.mensaje ? " (" + r.guardado.mensaje + ")" : ""}`);
+  if (!r.exito) throw new Error("El caso terminó con observaciones (ver detalle arriba).");
 }
 
 module.exports = { meta, run };
