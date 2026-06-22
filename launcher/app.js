@@ -114,6 +114,13 @@ function renderForm(test) {
     input.value = prev ?? campo.valor ?? "";
     if (campo.requerido) input.required = true;
     form.appendChild(input);
+
+    if (campo.ayuda) {
+      const help = document.createElement("div");
+      help.className = "ayuda";
+      help.textContent = campo.ayuda;
+      form.appendChild(help);
+    }
   }
 }
 

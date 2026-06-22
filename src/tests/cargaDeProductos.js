@@ -10,13 +10,13 @@ const meta = {
   descripcion: "Loguea y prueba la carga de un producto por los métodos elegidos.",
   campos: [
     // --- Acceso ---
-    { nombre: "urlBase", etiqueta: "URL del sistema", tipo: "text", requerido: true, valor: "https://", grupo: "Acceso" },
+    { nombre: "urlBase", etiqueta: "URL de login", tipo: "text", requerido: true, valor: "https://dev.fidel.com.ar/", ayuda: "La página donde ponés email y contraseña. NO la URL del documento.", grupo: "Acceso" },
     { nombre: "email", etiqueta: "Email", tipo: "text", requerido: true, grupo: "Acceso" },
     { nombre: "password", etiqueta: "Contraseña", tipo: "password", requerido: true, grupo: "Acceso" },
 
     // --- Caso ---
     { nombre: "cuentaId", etiqueta: "CuentaID", tipo: "number", requerido: true, grupo: "Caso" },
-    { nombre: "documento", etiqueta: "Documento", tipo: "text", requerido: true, valor: "factura", grupo: "Caso" },
+    { nombre: "documento", etiqueta: "Documento", tipo: "text", requerido: true, valor: "factura", ayuda: "factura, presupuesto, pedido, remito o venta_unificada. El script abre la pantalla solo.", grupo: "Caso" },
     { nombre: "clienteId", etiqueta: "ClienteID", tipo: "text", requerido: false, grupo: "Caso" },
 
     // --- Producto ---
