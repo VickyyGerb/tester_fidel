@@ -12,6 +12,12 @@ const btnGuardar = $("#guardar");
 const btnConectar = $("#conectar");
 const btnDetener = $("#detener");
 const githubEstado = $("#github-estado");
+const verNavegador = $("#verNavegador");
+const dejarAbierto = $("#dejarAbierto");
+const slowMoInput = $("#slowMo");
+const capturaSelect = $("#captura");
+const resultadoEl = $("#resultado");
+const historialEl = $("#historial");
 
 let tests = [];
 let corriendo = false;
@@ -50,6 +56,81 @@ function recordado(testId) {
   } catch (_) {
     return {};
   }
+}
+
+// --- Opciones de ejecución (globales, recordadas en localStorage) ---
+function leerOpciones() {
+  return {
+    headless: !verNavegador.checked,
+    slowMo: Number(slowMoInput.value || 80),
+    keepOpen: dejarAbierto.checked,
+    capturas: capturaSelect.value,
+  };
+}
+function recordarOpciones() {
+  try {
+    localStorage.setItem("fidel-tester:opciones", JSON.stringify({
+      verNavegador: verNavegador.checked,
+      dejarAbierto: dejarAbierto.checked,
+      slowMo: slowMoInput.value,
+      captura: capturaSelect.value,
+    }));
+  } catch (_) {}
+}
+function restaurarOpciones() {
+  try {
+    const o = JSON.parse(localStorage.getItem("fidel-tester:opciones") || "{}");
+    if (o.verNavegador != null) verNavegador.checked = o.verNavegador;
+    if (o.dejarAbierto != null) dejarAbierto.checked = o.dejarAbierto;
+    if (o.slowMo != null) slowMoInput.value = o.slowMo;
+    if (o.captura) capturaSelect.value = o.captura;
+  } catch (_) {}
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// --- Tarjeta de resultado + historial ---
+function renderResultado(r) {
+  const ok = !!r.exito;
+  resultadoEl.className = "resultado " + (ok ? "ok" : "err");
+  const filas = [];
+  if (r.documento) filas.push(`<b>Documento:</b> ${escapeHtml(r.documento)}`);
+  if (r.cuenta) filas.push(`<b>Cuenta:</b> ${escapeHtml(r.cuenta)}`);
+  if (r.metodos && r.metodos.length) filas.push(`<b>Métodos:</b> ${escapeHtml(r.metodos.join(", "))}`);
+  if (r.precioAntes || r.precioDespues) filas.push(`<b>Precio:</b> ${escapeHtml(r.precioAntes || "-")} → ${escapeHtml(r.precioDespues || "-")}`);
+  if (r.guardado) filas.push(`<b>Guardado:</b> ${escapeHtml(r.guardado)}${r.guardadoMensaje ? " (" + escapeHtml(r.guardadoMensaje) + ")" : ""}`);
+  if (typeof r.durationMs === "number") filas.push(`<b>Duración:</b> ${(r.durationMs / 1000).toFixed(1)}s`);
+  if (r.error) filas.push(`<b>Error:</b> ${escapeHtml(String(r.error).split("\n")[0])}`);
+  const cap = (r.capturas || []).map((src) => `<a href="${src}" target="_blank"><img src="${src}" alt="captura"/></a>`).join("");
+  resultadoEl.innerHTML =
+    `<h3>${ok ? "✅ PASÓ" : "❌ FALLÓ"} — ${escapeHtml(r.test || "")}</h3>` +
+    `<div class="meta">${filas.join("<br/>")}</div>` +
+    (cap ? `<div class="capturas">${cap}</div>` : "");
+  resultadoEl.classList.remove("oculto");
+}
+
+function horaDe(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleTimeString(); } catch (_) { return ""; }
+}
+function agregarHistorialItem(r, alPrincipio) {
+  const li = document.createElement("li");
+  li.innerHTML =
+    `<span><span class="h-res ${r.exito ? "ok" : "err"}">${r.exito ? "✅" : "❌"}</span> ${escapeHtml(r.test || "")}</span>` +
+    `<span class="h-meta">${horaDe(r.fecha)}${typeof r.durationMs === "number" ? " · " + (r.durationMs / 1000).toFixed(1) + "s" : ""}</span>`;
+  li.addEventListener("click", () => renderResultado(r));
+  if (alPrincipio && historialEl.firstChild) historialEl.insertBefore(li, historialEl.firstChild);
+  else historialEl.appendChild(li);
+}
+async function cargarHistorial() {
+  try {
+    const h = await (await fetch("/api/historial")).json();
+    historialEl.innerHTML = "";
+    for (const r of h) agregarHistorialItem(r, false);
+  } catch (_) {}
 }
 
 function renderForm(test) {
@@ -203,7 +284,7 @@ function correr() {
   const test = selTest.value;
   const vars = leerVars();
   recordar(test, vars);
-  stream("/api/run", { test, vars }, test);
+  stream("/api/run", { test, vars, opciones: leerOpciones() }, test);
 }
 
 async function actualizar() {
@@ -291,6 +372,9 @@ function procesarEvento(raw) {
 
   if (evento === "log") {
     appendLog(payload);
+  } else if (evento === "resultado") {
+    renderResultado(payload);
+    agregarHistorialItem(payload, true);
   } else if (evento === "done") {
     if (payload.code === 0) setEstado("OK", "ok");
     else setEstado("falló (código " + payload.code + ")", "err");
@@ -327,6 +411,11 @@ btnGuardar.addEventListener("click", guardar);
 btnConectar.addEventListener("click", conectar);
 btnDetener.addEventListener("click", detener);
 $("#limpiar").addEventListener("click", () => (logEl.textContent = ""));
+for (const el of [verNavegador, dejarAbierto, slowMoInput, capturaSelect]) {
+  el.addEventListener("change", recordarOpciones);
+}
 
+restaurarOpciones();
 init();
 chequearGitHub();
+cargarHistorial();
