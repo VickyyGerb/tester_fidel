@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fidel Tester — Launcher</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Fidel Tester</h1>
+        <p>Elegí una vista, completá los datos y corré el test.</p>
+      </div>
+      <div class="toolbar">
+        <span id="github-estado" class="github off" title="Estado de conexión a GitHub">GitHub: sin conectar</span>
+        <button id="conectar" type="button" class="secundario" title="Conectar tu cuenta de GitHub">🔗 Conectar GitHub</button>
+        <button id="actualizar" type="button" class="secundario" title="Traer la última versión del repo">↻ Actualizar</button>
+        <button id="guardar" type="button" class="secundario" title="Subir cambios a GitHub (requiere conexión)" disabled>💾 Guardar</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <label for="test">Vista a probar</label>
+        <select id="test"></select>
+        <p id="descripcion" class="muted"></p>
+
+        <form id="form" autocomplete="off"></form>
+
+        <div class="acciones">
+          <button id="run" type="button">▶ Correr test</button>
+          <button id="limpiar" type="button" class="secundario">Limpiar log</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="log-head">
+          <span>Salida</span>
+          <span id="estado" class="badge">listo</span>
+        </div>
+        <pre id="log"></pre>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

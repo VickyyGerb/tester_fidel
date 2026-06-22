@@ -1,0 +1,19 @@
+{
+  "name": "fidel-tester",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Tests E2E de Fidel con Playwright (modo librería) + launcher HTML para parametrizar y correr un test por vista del sistema.",
+  "scripts": {
+    "launcher": "node src/runner/server.js",
+    "test": "node src/run-test.js",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.60.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "google-sheets-api": "^1.0.1",
+    "google-spreadsheet": "^5.2.0"
+  }
+}
