@@ -16,6 +16,20 @@ const RUNNER = path.join(__dirname, "..", "run-test.js");
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(ROOT, "launcher")));
+app.use("/capturas", express.static(path.join(ROOT, "capturas")));
+
+const HISTORIAL = path.join(ROOT, "historial.json");
+function leerHistorial() {
+  try { return JSON.parse(fs.readFileSync(HISTORIAL, "utf8")); } catch (_) { return []; }
+}
+function guardarEnHistorial(item) {
+  const h = leerHistorial();
+  h.unshift(item);
+  try { fs.writeFileSync(HISTORIAL, JSON.stringify(h.slice(0, 100), null, 2)); } catch (_) {}
+}
+function leerResultado(runId) {
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, "capturas", runId, "resultado.json"), "utf8")); } catch (_) { return null; }
+}
 
 function loadTestsMeta() {
   return fs
@@ -85,14 +99,55 @@ function psArgs(script, extra = []) {
   return ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(SCRIPTS_DIR, script), ...extra];
 }
 
-// Correr un test (una vista) con las variables del formulario.
+// Correr un test (una vista) con variables + opciones de ejecución. Al terminar,
+// lee el resultado estructurado (capturas/<runId>/resultado.json), lo manda por
+// el evento "resultado" y lo agrega al historial.
 app.post("/api/run", (req, res) => {
-  const { test, vars = {} } = req.body || {};
+  const { test, vars = {}, opciones = {} } = req.body || {};
   if (!test) return res.status(400).json({ error: "Falta el test a correr." });
-  const env = { ...process.env };
+
+  const runId = String(Date.now());
+  const env = { ...process.env, RUN_ID: runId };
   for (const [k, v] of Object.entries(vars)) env[`VAR_${k}`] = String(v ?? "");
-  streamProcess(req, res, process.execPath, [RUNNER, test], env);
+  if (opciones.headless != null) env.HEADLESS = opciones.headless ? "1" : "0";
+  if (opciones.slowMo != null && opciones.slowMo !== "") env.SLOWMO = String(opciones.slowMo);
+  if (opciones.keepOpen != null) env.KEEP_OPEN = opciones.keepOpen ? "1" : "0";
+  if (opciones.capturas) env.CAPTURAS = String(opciones.capturas);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+
+  let terminado = false;
+  const child = spawn(process.execPath, [RUNNER, test], { env, cwd: ROOT });
+  child.stdout.on("data", (d) => send("log", d.toString()));
+  child.stderr.on("data", (d) => send("log", d.toString()));
+  child.on("close", (code) => {
+    if (terminado) return;
+    terminado = true;
+    const resultado = leerResultado(runId);
+    if (resultado) {
+      resultado.fecha = new Date().toISOString();
+      guardarEnHistorial(resultado);
+      send("resultado", resultado);
+    }
+    send("done", { code: code == null ? 1 : code });
+    res.end();
+  });
+  child.on("error", (err) => {
+    if (terminado) return;
+    terminado = true;
+    send("log", "Error lanzando el runner: " + err.message + "\n");
+    send("done", { code: 1 });
+    res.end();
+  });
+  res.on("close", () => { if (!terminado) child.kill(); });
 });
+
+// Historial de corridas (más recientes primero).
+app.get("/api/historial", (req, res) => res.json(leerHistorial().slice(0, 30)));
 
 // Health check para que el cliente sepa cuándo el server volvió tras reiniciar.
 app.get("/api/ping", (req, res) => res.json({ ok: true }));

@@ -103,7 +103,19 @@ async function run({ page, vars, log }) {
   log(`  Métodos cargados: ${r.tiposCarga.join(", ") || "-"}`);
   log(`  Precio antes: ${r.precioAntes}  |  después: ${r.precioDespues}`);
   log(`  Guardado: ${r.guardado.estado}${r.guardado.mensaje ? " (" + r.guardado.mensaje + ")" : ""}`);
-  if (!r.exito) throw new Error("El caso terminó con observaciones (ver detalle arriba).");
+
+  return {
+    exito: r.exito,
+    resumen: {
+      documento: caso.documento,
+      cuenta: caso.cuentaID,
+      metodos: r.tiposCarga,
+      precioAntes: r.precioAntes,
+      precioDespues: r.precioDespues,
+      guardado: r.guardado.estado,
+      guardadoMensaje: r.guardado.mensaje,
+    },
+  };
 }
 
 module.exports = { meta, run };

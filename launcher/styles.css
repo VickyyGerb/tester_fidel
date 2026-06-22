@@ -77,6 +77,37 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 
 .ayuda { color: var(--muted); font-size: 11px; margin: 3px 0 2px; line-height: 1.4; }
 
+.oculto { display: none; }
+
+.ejec select, .ejec input[type="number"] { margin-bottom: 4px; }
+
+.resultado {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.resultado.ok { border-color: #14532d; background: #0f2417; }
+.resultado.err { border-color: #7f1d1d; background: #241011; }
+.resultado h3 { margin: 0 0 8px; font-size: 16px; }
+.resultado .meta { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.resultado .meta b { color: var(--text); }
+.resultado .capturas { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.resultado .capturas a img {
+  height: 90px; border: 1px solid var(--border); border-radius: 6px; display: block;
+}
+
+.historial { list-style: none; margin: 6px 0 0; padding: 0; max-height: 240px; overflow: auto; }
+.historial li {
+  display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px;
+  font-size: 12.5px; cursor: pointer;
+}
+.historial li:hover { border-color: var(--accent); }
+.historial .h-res.ok { color: var(--ok); font-weight: 600; }
+.historial .h-res.err { color: var(--err); font-weight: 600; }
+.historial .h-meta { color: var(--muted); }
+
 .grupo {
   margin: 18px 0 6px;
   font-size: 11px;

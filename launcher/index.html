@@ -28,14 +28,33 @@
 
         <form id="form" autocomplete="off"></form>
 
+        <div class="ejec">
+          <div class="grupo">Ejecución</div>
+          <label class="check"><input type="checkbox" id="verNavegador" checked /><span>Ver navegador</span></label>
+          <label class="check"><input type="checkbox" id="dejarAbierto" /><span>Dejar navegador abierto al terminar</span></label>
+          <label>Velocidad (slowMo, ms)</label>
+          <input type="number" id="slowMo" value="80" min="0" step="10" />
+          <label>Capturas de pantalla</label>
+          <select id="captura">
+            <option value="alfallar">Al fallar</option>
+            <option value="siempre">Siempre</option>
+            <option value="nunca">Nunca</option>
+          </select>
+        </div>
+
         <div class="acciones">
           <button id="run" type="button">▶ Correr test</button>
           <button id="detener" type="button" class="peligro" disabled>⏹ Detener</button>
           <button id="limpiar" type="button" class="secundario">Limpiar log</button>
         </div>
+
+        <div class="grupo">Historial</div>
+        <ul id="historial" class="historial"></ul>
       </section>
 
       <section class="panel">
+        <div id="resultado" class="resultado oculto"></div>
+
         <div class="log-head">
           <span>Salida</span>
           <span id="estado" class="badge">listo</span>
