@@ -52,22 +52,32 @@ function streamProcess(req, res, cmd, argv, env, matarAlCerrar = true) {
   const send = (event, data) =>
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
+  let terminado = false;
+  const finalizar = (code) => {
+    if (terminado) return;
+    terminado = true;
+    send("done", { code });
+    res.end();
+  };
+
   const child = spawn(cmd, argv, { env: env || process.env, cwd: ROOT });
   child.stdout.on("data", (d) => send("log", d.toString()));
   child.stderr.on("data", (d) => send("log", d.toString()));
-  child.on("close", (code) => {
-    send("done", { code });
-    res.end();
-  });
+  // code null = el proceso murió por señal (lo reportamos como 1, no como null).
+  child.on("close", (code) => finalizar(code == null ? 1 : code));
   child.on("error", (err) => {
     send("log", "Error lanzando el proceso: " + err.message + "\n");
-    send("done", { code: 1 });
-    res.end();
+    finalizar(1);
   });
 
-  // Si el navegador cierra la pestaña, matamos el proceso (solo para tests;
-  // NUNCA para git, para no cortar un commit/push a la mitad).
-  if (matarAlCerrar) req.on("close", () => child.kill());
+  // Si el cliente ABANDONA (cierra la pestaña) antes de terminar, cancelamos el
+  // proceso. Escuchamos res (no req) + guardia "terminado" para NO cortar por el
+  // fin normal de la request (ese era el bug del "código null").
+  if (matarAlCerrar) {
+    res.on("close", () => {
+      if (!terminado) child.kill();
+    });
+  }
 }
 
 function psArgs(script, extra = []) {
