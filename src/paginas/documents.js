@@ -166,10 +166,15 @@ class DocumentsPage {
                 '.validation-summary-errors'];
             const vistos = new Set(); const out = [];
             sels.forEach(s => document.querySelectorAll(s).forEach(el => {
-                // Preferir el cuerpo del toast (toast-message) para no pegar el
-                // título "Notificación" con el mensaje ("NotificaciónCreado...").
-                const msgEl = el.querySelector('.toast-message, .noty_text, .growl-message, [class*="message"]');
-                const txt = ((msgEl ? msgEl.textContent : el.textContent) || '').replace(/\s+/g, ' ').trim();
+                // Sacar el cuerpo del mensaje sin pegarle el título: gritter y toastr
+                // tienen título y mensaje separados ("NotificaciónCreado Correctamente").
+                const msgEl = el.querySelector('.toast-message, .noty_text, .growl-message');
+                const titleEl = el.querySelector('.gritter-title, .toast-title, .noty_title');
+                let txt;
+                if (msgEl) txt = msgEl.textContent || '';
+                else if (titleEl) txt = (el.textContent || '').replace(titleEl.textContent || '', ' ');
+                else txt = el.textContent || '';
+                txt = txt.replace(/\s+/g, ' ').trim();
                 if (txt && el.offsetParent && !vistos.has(txt)) { vistos.add(txt); out.push({ clase: String(el.className || ''), texto: txt.slice(0, 200) }); }
             }));
             return out;
