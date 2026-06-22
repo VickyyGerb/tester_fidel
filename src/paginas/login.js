@@ -1,16 +1,13 @@
-// Page-object de Login (SSO de Fidel). El login es AJAX: al apretar "Ingresar"
-// NO hay navegación clásica (no dispara 'load'), por eso waitForNavigation se
-// cuelga. La forma robusta es ESPERAR EL ELEMENTO siguiente, no la navegación.
-// Login en 2 pasos: credenciales -> selección de cuenta por ID.
+// Page-object de Login (SSO de Fidel). Login AJAX: tras "Ingresar" no hay
+// navegación clásica, así que esperamos por URL/elemento, no por waitForNavigation.
+// El paso "ID de cuenta" es OPCIONAL: muchos usuarios entran directo con
+// email+contraseña. Si el campo aparece, lo completamos; si no, seguimos.
 async function login(page, { urlBase, email, password, cuentaId, log = console.log }) {
   if (!urlBase) throw new Error("Falta la URL de login (urlBase).");
   if (!email || !password) throw new Error("Faltan email y/o contraseña.");
   const cuenta = String(cuentaId ?? "").trim();
-  if (!/^\d+$/.test(cuenta)) {
-    throw new Error(`ID de cuenta inválido: "${cuentaId}" (debe ser numérico).`);
-  }
 
-  log(`Login en ${urlBase} como ${email} (cuenta ${cuenta})...`);
+  log(`Login en ${urlBase} como ${email}...`);
   await page.goto(urlBase, { waitUntil: "domcontentloaded" });
 
   // Paso 1: credenciales.
@@ -20,22 +17,24 @@ async function login(page, { urlBase, email, password, cuentaId, log = console.l
   await page.getByRole("textbox", { name: "Contraseña" }).fill(password);
   await page.getByRole("button", { name: "Ingresar" }).click();
 
-  // Paso 2: selección de cuenta. Esperamos que aparezca el campo (post-SSO),
-  // sin depender de una navegación que quizá no ocurre.
-  const idCuenta = page.getByRole("textbox", { name: "ID de cuenta" });
-  try {
-    await idCuenta.waitFor({ state: "visible", timeout: 25000 });
-  } catch (e) {
-    throw new Error(
-      "Tras enviar las credenciales no apareció el paso 'ID de cuenta'. " +
-        "Revisá email/contraseña o la URL de login (debe ser la del SSO)."
-    );
-  }
-  await idCuenta.fill(cuenta);
-  await page.getByRole("button", { name: "Ingresar" }).click();
+  // El SSO valida y redirige al sistema: esperamos salir del dominio del SSO.
+  await page.waitForURL((url) => !/sso\./i.test(url), { timeout: 30000 }).catch(() => {});
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
-  // Tras elegir la cuenta, esperamos a que el sistema cargue (tolerante).
-  await page.waitForLoadState("networkidle", { timeout: 25000 }).catch(() => {});
+  // Paso 2 (OPCIONAL): selección de cuenta. Solo si el campo aparece.
+  const idCuenta = page.getByRole("textbox", { name: "ID de cuenta" });
+  if (await idCuenta.isVisible().catch(() => false)) {
+    if (!/^\d+$/.test(cuenta)) {
+      throw new Error(`Este usuario pide "ID de cuenta" pero el valor "${cuentaId}" no es numérico.`);
+    }
+    log(`Paso 'ID de cuenta' presente, completando con ${cuenta}...`);
+    await idCuenta.fill(cuenta);
+    await page.getByRole("button", { name: "Ingresar" }).click();
+    await page.waitForLoadState("networkidle", { timeout: 25000 }).catch(() => {});
+  } else {
+    log("Login directo (sin paso de ID de cuenta).");
+  }
+
   log("✓ Login OK");
 }
 

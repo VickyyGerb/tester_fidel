@@ -17,10 +17,12 @@ async function correrCaso(page, caso, { confirmarGuardado = true } = {}) {
   const fmtPrecios = (arr) => (arr.length ? [...new Set(arr)].map((n) => "$" + Number(n).toLocaleString("es-AR")).join(", ") : "-");
 
   const documentsPage = new DocumentsPage(page, caso.documento);
+  console.log(`📍 URL tras login: ${page.url()}`);
   await documentsPage.navegar(caso.documento);
-  console.log(`✅ Navegó a ${caso.documento}`);
+  console.log(`✅ Navegó a ${caso.documento} -> ${page.url()}`);
 
   if (caso.clienteID && caso.clienteID !== "") {
+    console.log(`👤 Seleccionando cliente ${caso.clienteID}...`);
     await documentsPage.seleccionarCliente(caso.clienteID);
     console.log(`✅ Cliente ${caso.clienteID} seleccionado`);
   }
