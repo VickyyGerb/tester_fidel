@@ -47,8 +47,17 @@ if (-not $SinConfirmar) {
 Info "Commit + push..."
 git -C $RepoRoot add -A
 git -C $RepoRoot commit -m $Mensaje
-git -C $RepoRoot push
+
+# Si la rama todavía no tiene upstream (primer push), lo configura.
+$rama = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
+git -C $RepoRoot rev-parse --abbrev-ref --symbolic-full-name "@{u}" *> $null
+if ($LASTEXITCODE -eq 0) {
+  git -C $RepoRoot push
+} else {
+  git -C $RepoRoot push -u origin $rama
+}
 
 Ok "Guardado y subido a GitHub."
+
 
 

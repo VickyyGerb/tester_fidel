@@ -43,7 +43,7 @@ app.get("/api/tests", (req, res) => {
 const SCRIPTS_DIR = path.join(ROOT, "scripts");
 
 // Abre un stream SSE y vuelca stdout/stderr de un proceso hijo en vivo.
-function streamProcess(req, res, cmd, argv, env) {
+function streamProcess(req, res, cmd, argv, env, matarAlCerrar = true) {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -65,8 +65,9 @@ function streamProcess(req, res, cmd, argv, env) {
     res.end();
   });
 
-  // Si el navegador cierra la pestaña, matamos el proceso.
-  req.on("close", () => child.kill());
+  // Si el navegador cierra la pestaña, matamos el proceso (solo para tests;
+  // NUNCA para git, para no cortar un commit/push a la mitad).
+  if (matarAlCerrar) req.on("close", () => child.kill());
 }
 
 function psArgs(script, extra = []) {
@@ -84,7 +85,7 @@ app.post("/api/run", (req, res) => {
 
 // Traer la última versión del repo (git pull + deps).
 app.post("/api/actualizar", (req, res) => {
-  streamProcess(req, res, "powershell.exe", psArgs("actualizar.ps1"));
+  streamProcess(req, res, "powershell.exe", psArgs("actualizar.ps1"), null, false);
 });
 
 // Commit + push. Requiere confirmación explícita "GUARDAR" (el HTML la pide).
@@ -99,7 +100,7 @@ app.post("/api/guardar", (req, res) => {
   }
   const extra = ["-SinConfirmar"];
   if (mensaje) extra.push("-Mensaje", String(mensaje));
-  streamProcess(req, res, "powershell.exe", psArgs("guardar.ps1", extra));
+  streamProcess(req, res, "powershell.exe", psArgs("guardar.ps1", extra), null, false);
 });
 
 // Estado de conexión a GitHub (gh). Devuelve el usuario si está conectado.
