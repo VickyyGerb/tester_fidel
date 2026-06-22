@@ -56,7 +56,37 @@ function renderForm(test) {
   descripcion.textContent = test.descripcion || "";
   const previos = recordado(test.id);
   form.innerHTML = "";
+  let grupoActual = null;
+
   for (const campo of test.campos || []) {
+    // Encabezado de sección cuando cambia el grupo.
+    if (campo.grupo && campo.grupo !== grupoActual) {
+      grupoActual = campo.grupo;
+      const h = document.createElement("div");
+      h.className = "grupo";
+      h.textContent = campo.grupo;
+      form.appendChild(h);
+    }
+
+    const prev = previos[campo.nombre];
+
+    // Checkbox (SÍ/NO): etiqueta al lado del control.
+    if (campo.tipo === "checkbox") {
+      const wrap = document.createElement("label");
+      wrap.className = "check";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = campo.nombre;
+      input.dataset.tipo = "checkbox";
+      input.checked = prev != null ? prev === "SI" : String(campo.valor).toUpperCase() === "SI";
+      const span = document.createElement("span");
+      span.textContent = campo.etiqueta || campo.nombre;
+      wrap.appendChild(input);
+      wrap.appendChild(span);
+      form.appendChild(wrap);
+      continue;
+    }
+
     const label = document.createElement("label");
     label.textContent = campo.etiqueta || campo.nombre;
     if (campo.requerido) {
@@ -65,30 +95,40 @@ function renderForm(test) {
       req.textContent = " *";
       label.appendChild(req);
     }
-
-    const input = document.createElement("input");
-    input.type = campo.tipo === "password" ? "password" : campo.tipo === "number" ? "number" : "text";
-    input.name = campo.nombre;
-    input.value = previos[campo.nombre] ?? campo.valor ?? "";
-    if (campo.requerido) input.required = true;
-
     form.appendChild(label);
+
+    let input;
+    if (campo.tipo === "select") {
+      input = document.createElement("select");
+      for (const op of campo.opciones || []) {
+        const o = document.createElement("option");
+        o.value = op;
+        o.textContent = op === "" ? "(ninguno)" : op;
+        input.appendChild(o);
+      }
+    } else {
+      input = document.createElement("input");
+      input.type = campo.tipo === "password" ? "password" : campo.tipo === "number" ? "number" : "text";
+    }
+    input.name = campo.nombre;
+    input.value = prev ?? campo.valor ?? "";
+    if (campo.requerido) input.required = true;
     form.appendChild(input);
   }
 }
 
 function leerVars() {
   const vars = {};
-  for (const input of form.querySelectorAll("input")) {
-    vars[input.name] = input.value;
+  for (const el of form.querySelectorAll("input, select")) {
+    vars[el.name] = el.dataset.tipo === "checkbox" ? (el.checked ? "SI" : "NO") : el.value;
   }
   return vars;
 }
 
 function validar() {
-  for (const input of form.querySelectorAll("input[required]")) {
-    if (!input.value.trim()) {
-      input.focus();
+  for (const el of form.querySelectorAll("input[required], select[required]")) {
+    if (!el.value.trim()) {
+      el.focus();
       appendLog(`\n⚠ Falta completar un campo obligatorio.\n`);
       return false;
     }

@@ -1,35 +1,105 @@
 // TEST: Carga de Productos.
-// "meta" describe la vista y qué campos pide el formulario del launcher.
-// "run(ctx)" es el flujo real; ctx = { page, context, browser, vars, log }.
+// Los campos del formulario espejan las columnas del Excel de casos de prueba.
+// run() arma el objeto "caso" con la MISMA forma que googleSheetsReader.js, así
+// el flujo real (referencia/cargaDeProductos) se enchufa sin reescribir nada.
 const { login } = require("../paginas/login");
 
 const meta = {
   nombre: "Carga de Productos",
-  descripcion: "Loguea, abre un documento de compra y carga un producto.",
+  descripcion: "Loguea y prueba la carga de un producto por los métodos elegidos.",
   campos: [
-    { nombre: "urlBase", etiqueta: "URL del sistema", tipo: "text", requerido: true, valor: "https://" },
-    { nombre: "email", etiqueta: "Email", tipo: "text", requerido: true },
-    { nombre: "password", etiqueta: "Contraseña", tipo: "password", requerido: true },
-    { nombre: "cuentaId", etiqueta: "ID de cuenta", tipo: "number", requerido: true },
-    { nombre: "proveedor", etiqueta: "Número de proveedor", tipo: "number", requerido: false },
-    { nombre: "producto", etiqueta: "Código de producto", tipo: "text", requerido: false },
+    // --- Acceso ---
+    { nombre: "urlBase", etiqueta: "URL del sistema", tipo: "text", requerido: true, valor: "https://", grupo: "Acceso" },
+    { nombre: "email", etiqueta: "Email", tipo: "text", requerido: true, grupo: "Acceso" },
+    { nombre: "password", etiqueta: "Contraseña", tipo: "password", requerido: true, grupo: "Acceso" },
+
+    // --- Caso ---
+    { nombre: "cuentaId", etiqueta: "CuentaID", tipo: "number", requerido: true, grupo: "Caso" },
+    { nombre: "documento", etiqueta: "Documento", tipo: "text", requerido: true, valor: "factura", grupo: "Caso" },
+    { nombre: "clienteId", etiqueta: "ClienteID", tipo: "text", requerido: false, grupo: "Caso" },
+
+    // --- Producto ---
+    { nombre: "productoCodigo", etiqueta: "Código interno", tipo: "text", requerido: false, grupo: "Producto" },
+    { nombre: "productoCodigoBarra", etiqueta: "Código de barra", tipo: "text", requerido: false, grupo: "Producto" },
+
+    // --- Métodos a probar (SÍ/NO) ---
+    { nombre: "probarManual", etiqueta: "Carga manual", tipo: "checkbox", valor: "SI", grupo: "Métodos a probar" },
+    { nombre: "probarCodigoBarra", etiqueta: "Código de barra", tipo: "checkbox", valor: "NO", grupo: "Métodos a probar" },
+    { nombre: "probarAsignMultiple", etiqueta: "Asignación múltiple", tipo: "checkbox", valor: "NO", grupo: "Métodos a probar" },
+    { nombre: "probarPlantilla", etiqueta: "Plantilla", tipo: "checkbox", valor: "NO", grupo: "Métodos a probar" },
+    { nombre: "plantillaNombre", etiqueta: "Nombre de plantilla", tipo: "text", requerido: false, grupo: "Métodos a probar" },
+
+    // --- Configuraciones ---
+    { nombre: "listaPrecios", etiqueta: "Lista de precios", tipo: "text", requerido: false, grupo: "Configuraciones" },
+    { nombre: "moneda", etiqueta: "Moneda", tipo: "select", opciones: ["", "Peso", "Dólar"], requerido: false, grupo: "Configuraciones" },
+    { nombre: "cotizacion", etiqueta: "Cotización", tipo: "number", requerido: false, grupo: "Configuraciones" },
+    { nombre: "descuentoItem", etiqueta: "Descuento por ítem", tipo: "text", requerido: false, grupo: "Configuraciones" },
+    { nombre: "alicuota", etiqueta: "Alícuota", tipo: "text", requerido: false, grupo: "Configuraciones" },
+    { nombre: "descuentoGlobal", etiqueta: "Descuento global", tipo: "text", requerido: false, grupo: "Configuraciones" },
   ],
 };
 
+const siNo = (v) => String(v).toUpperCase() === "SI";
+
+function limpiarConfig(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v != null && String(v).trim() !== "") out[k] = String(v).trim();
+  }
+  return out;
+}
+
 async function run({ page, vars, log }) {
+  // Mismo shape que googleSheetsReader.leerCasosDePrueba -> casos[i].
+  const caso = {
+    cuentaID: vars.cuentaId || "",
+    documento: (vars.documento || "").toLowerCase(),
+    clienteID: vars.clienteId || "",
+    producto: {
+      codigoInterno: vars.productoCodigo || "",
+      codigoBarra: vars.productoCodigoBarra || "",
+    },
+    probarMetodos: {
+      manual: siNo(vars.probarManual),
+      codigoBarra: siNo(vars.probarCodigoBarra),
+      asignMultiple: siNo(vars.probarAsignMultiple),
+      plantilla: siNo(vars.probarPlantilla),
+    },
+    plantillaNombre: vars.plantillaNombre || null,
+    configuraciones: limpiarConfig({
+      lista_precios: vars.listaPrecios,
+      moneda: vars.moneda,
+      cotizacion: vars.cotizacion,
+      descuento_item: vars.descuentoItem,
+      alicuota: vars.alicuota,
+      descuento_global: vars.descuentoGlobal,
+    }),
+  };
+
+  if (!Object.values(caso.probarMetodos).some(Boolean)) {
+    throw new Error("Marcá al menos un método a probar (manual, código de barra, etc.).");
+  }
+  if (caso.probarMetodos.plantilla && !caso.plantillaNombre) {
+    throw new Error("Marcaste 'Plantilla' pero falta el nombre de la plantilla.");
+  }
+
+  log("Caso a probar:\n" + JSON.stringify(caso, null, 2));
+
   await login(page, {
     urlBase: vars.urlBase,
     email: vars.email,
     password: vars.password,
-    cuentaId: vars.cuentaId,
+    cuentaId: caso.cuentaID,
     log,
   });
 
-  log(`Proveedor: ${vars.proveedor || "(ninguno)"} | Producto: ${vars.producto || "(ninguno)"}`);
-
-  // TODO: portar acá el flujo real de carga (equivalente a paginas/documents.js
-  // + componentes/productLoader.js de tu ejemplo). Por ahora solo valida el login.
-  log("Pendiente: completar el flujo de carga de producto.");
+  // TODO: portar el flujo real desde referencia/cargaDeProductos:
+  //   paginas/documents.js  -> abrir el documento (caso.documento) + cliente
+  //   componentes/productLoader.js -> cargar por cada método marcado
+  //   componentes/configApplier.js -> aplicar caso.configuraciones y verificar
+  const metodos = Object.entries(caso.probarMetodos).filter(([, v]) => v).map(([k]) => k);
+  log(`Login OK. Métodos marcados: ${metodos.join(", ")}.`);
+  log("Pendiente: portar el flujo de carga (documents/productLoader/configApplier).");
 }
 
 module.exports = { meta, run };
