@@ -166,7 +166,10 @@ class DocumentsPage {
                 '.validation-summary-errors'];
             const vistos = new Set(); const out = [];
             sels.forEach(s => document.querySelectorAll(s).forEach(el => {
-                const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+                // Preferir el cuerpo del toast (toast-message) para no pegar el
+                // título "Notificación" con el mensaje ("NotificaciónCreado...").
+                const msgEl = el.querySelector('.toast-message, .noty_text, .growl-message, [class*="message"]');
+                const txt = ((msgEl ? msgEl.textContent : el.textContent) || '').replace(/\s+/g, ' ').trim();
                 if (txt && el.offsetParent && !vistos.has(txt)) { vistos.add(txt); out.push({ clase: String(el.className || ''), texto: txt.slice(0, 200) }); }
             }));
             return out;
