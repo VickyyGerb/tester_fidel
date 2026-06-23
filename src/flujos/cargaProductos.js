@@ -7,7 +7,7 @@ const { ProductLoader } = require("../componentes/productLoader");
 const { ConfigApplier } = require("../componentes/configApplier");
 const { leerLineasProducto } = require("../utiles/lecturaPrecios");
 
-async function correrCaso(page, caso, { confirmarGuardado = true } = {}) {
+async function correrCaso(page, caso, { confirmarGuardado = true, base } = {}) {
   const mets = caso.probarMetodos;
   let exito = false;
   let reglaDescuentoOk = true;
@@ -16,7 +16,7 @@ async function correrCaso(page, caso, { confirmarGuardado = true } = {}) {
   const nombreMetodo = { manual: "Manual", codigoBarra: "Código de barra", asignMultiple: "Asignación múltiple", plantilla: "Plantilla" };
   const fmtPrecios = (arr) => (arr.length ? [...new Set(arr)].map((n) => "$" + Number(n).toLocaleString("es-AR")).join(", ") : "-");
 
-  const documentsPage = new DocumentsPage(page, caso.documento);
+  const documentsPage = new DocumentsPage(page, caso.documento, base);
   console.log(`📍 URL tras login: ${page.url()}`);
   await documentsPage.navegar(caso.documento);
   console.log(`✅ Navegó a ${caso.documento} -> ${page.url()}`);

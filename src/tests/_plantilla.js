@@ -4,12 +4,13 @@
 // 2) Ajustá "meta" (nombre, descripción y los campos que necesite la vista).
 // 3) Escribí el flujo en "run".
 const { login } = require("../paginas/login");
+const { OPCIONES_AMBIENTE, resolverAmbiente } = require("../config/ambientes");
 
 const meta = {
   nombre: "Mi Vista (cambiá esto)",
   descripcion: "Describí qué prueba este test.",
   campos: [
-    { nombre: "urlBase", etiqueta: "URL del sistema", tipo: "text", requerido: true, valor: "https://" },
+    { nombre: "ambiente", etiqueta: "Ambiente", tipo: "select", requerido: true, opciones: OPCIONES_AMBIENTE, valor: "dev" },
     { nombre: "email", etiqueta: "Email", tipo: "text", requerido: true },
     { nombre: "password", etiqueta: "Contraseña", tipo: "password", requerido: true },
     { nombre: "cuentaId", etiqueta: "ID de cuenta", tipo: "number", requerido: true },
@@ -19,16 +20,18 @@ const meta = {
 };
 
 async function run({ page, vars, log }) {
+  const amb = resolverAmbiente(vars.ambiente);
+
   await login(page, {
-    urlBase: vars.urlBase,
+    urlBase: amb.loginUrl,
     email: vars.email,
     password: vars.password,
     cuentaId: vars.cuentaId,
     log,
   });
 
-  // Tu flujo acá. Ejemplo:
-  // await page.goto(`${vars.urlBase}venta/lista`);
+  // Tu flujo acá. La raíz del sistema del ambiente elegido es `amb.base`. Ejemplo:
+  // await page.goto(`${amb.base}/Sistema/Venta/Lista`);
   // await page.getByRole("button", { name: "Nuevo" }).click();
 
   log("Plantilla sin implementar. Escribí el flujo de tu vista.");

@@ -4,13 +4,14 @@
 // el flujo real (referencia/cargaDeProductos) se enchufa sin reescribir nada.
 const { login } = require("../paginas/login");
 const { correrCaso } = require("../flujos/cargaProductos");
+const { OPCIONES_AMBIENTE, resolverAmbiente } = require("../config/ambientes");
 
 const meta = {
   nombre: "Carga de Productos",
   descripcion: "Loguea y prueba la carga de un producto por los métodos elegidos.",
   campos: [
     // --- Acceso ---
-    { nombre: "urlBase", etiqueta: "URL de login", tipo: "text", requerido: true, valor: "https://dev.fidel.com.ar/", ayuda: "La página donde ponés email y contraseña. NO la URL del documento.", grupo: "Acceso" },
+    { nombre: "ambiente", etiqueta: "Ambiente", tipo: "select", requerido: true, opciones: OPCIONES_AMBIENTE, valor: "dev", ayuda: "Elegí el ambiente; el login y la navegación a documentos se resuelven solos.", grupo: "Acceso" },
     { nombre: "email", etiqueta: "Email", tipo: "text", requerido: true, grupo: "Acceso" },
     { nombre: "password", etiqueta: "Contraseña", tipo: "password", requerido: true, grupo: "Acceso" },
 
@@ -86,8 +87,11 @@ async function run({ page, vars, log }) {
 
   log("Caso a probar:\n" + JSON.stringify(caso, null, 2));
 
+  const amb = resolverAmbiente(vars.ambiente);
+  log(`Ambiente: ${amb.etiqueta} (${amb.base})`);
+
   await login(page, {
-    urlBase: vars.urlBase,
+    urlBase: amb.loginUrl,
     email: vars.email,
     password: vars.password,
     cuentaId: caso.cuentaID,
@@ -95,8 +99,8 @@ async function run({ page, vars, log }) {
   });
 
   // Flujo real: navegar al documento, cargar por cada método, aplicar
-  // configuraciones, verificar precios y guardar.
-  const r = await correrCaso(page, caso, { confirmarGuardado: true });
+  // configuraciones, verificar precios y guardar. La base sale del ambiente.
+  const r = await correrCaso(page, caso, { confirmarGuardado: true, base: amb.base });
 
   log("");
   log(`RESULTADO: ${r.exito ? "✓ OK" : "✗ con observaciones"}`);

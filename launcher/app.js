@@ -182,9 +182,13 @@ function renderForm(test) {
     if (campo.tipo === "select") {
       input = document.createElement("select");
       for (const op of campo.opciones || []) {
+        // Soporta opciones simples ("Peso") u objetos {valor, etiqueta} para
+        // cuando el valor guardado difiere de lo que se muestra (ej: ambientes).
+        const valor = op && typeof op === "object" ? op.valor : op;
+        const etiqueta = op && typeof op === "object" ? op.etiqueta : op;
         const o = document.createElement("option");
-        o.value = op;
-        o.textContent = op === "" ? "(ninguno)" : op;
+        o.value = valor;
+        o.textContent = valor === "" ? "(ninguno)" : etiqueta;
         input.appendChild(o);
       }
     } else {

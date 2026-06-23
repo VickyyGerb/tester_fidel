@@ -1,16 +1,20 @@
 class DocumentsPage {
-    constructor(page, documento) {
+    // `base` es la raíz del sistema del ambiente elegido (ej: https://dev.fidel.com.ar).
+    // Antes esto venía hardcodeado en dev; ahora lo inyecta el flujo desde la config.
+    constructor(page, documento, base = "https://dev.fidel.com.ar") {
         this.page = page;
         this.documento = (documento || '').toLowerCase();
+        this.base = String(base).replace(/\/+$/, ''); // sin barra final
     }
 
     async navegar(tipoDocumento) {
+        const b = this.base;
         const urls = {
-            factura: "https://dev.fidel.com.ar/Sistema/Venta/Crear",
-            presupuesto: "https://dev.fidel.com.ar/Sistema/PresupuestoVenta/Crear",
-            venta_unificada: "https://dev.fidel.com.ar/Sistema/ComprobanteRapido/Crear",
-            pedido: "https://dev.fidel.com.ar/Sistema/Pedido/Crear",
-            remito: "https://dev.fidel.com.ar/Sistema/Remito/Crear",
+            factura: `${b}/Sistema/Venta/Crear`,
+            presupuesto: `${b}/Sistema/PresupuestoVenta/Crear`,
+            venta_unificada: `${b}/Sistema/ComprobanteRapido/Crear`,
+            pedido: `${b}/Sistema/Pedido/Crear`,
+            remito: `${b}/Sistema/Remito/Crear`,
         };
         const url = urls[tipoDocumento];
         if (!url) throw new Error(`Documento desconocido: ${tipoDocumento}`);
