@@ -5,6 +5,11 @@
 Assert-Comando "node" "Instalá Node.js LTS desde https://nodejs.org"
 Assert-Comando "git"  "Instalá Git desde https://git-scm.com"
 
+$nodeMajor = [int]((node -v) -replace '^v(\d+).*', '$1')
+if ($nodeMajor -lt 18) {
+  throw "Node.js $(node -v) es muy viejo. Playwright necesita 18+ (recomendado: LTS 22). Instalá la LTS desde https://nodejs.org, cerrá esta ventana y volvé a abrir instalar."
+}
+
 # Si NO estamos dentro de un repo git, clonamos.
 $esRepo = Test-Path (Join-Path $RepoRoot ".git")
 if (-not $esRepo) {
