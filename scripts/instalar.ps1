@@ -7,7 +7,10 @@ Assert-Comando "git"  "Instalá Git desde https://git-scm.com"
 
 $nodeMajor = [int]((node -v) -replace '^v(\d+).*', '$1')
 if ($nodeMajor -lt 18) {
-  throw "Node.js $(node -v) es muy viejo. Playwright necesita 18+ (recomendado: LTS 22). Instalá la LTS desde https://nodejs.org, cerrá esta ventana y volvé a abrir instalar."
+  Write-Host ""
+  Write-Host "Node.js $(node -v) es muy viejo. Playwright necesita 18+ (recomendado: LTS 22)." -ForegroundColor Red
+  Write-Host "Instala la LTS desde https://nodejs.org, cerra esta ventana y volve a abrir instalar." -ForegroundColor Red
+  exit 1
 }
 
 # Si NO estamos dentro de un repo git, clonamos.
