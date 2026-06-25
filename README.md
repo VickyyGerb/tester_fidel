@@ -13,8 +13,9 @@ parametrizar y correr un test por cada vista del sistema, sin tocar código.
 ## Para el tester
 
 ```powershell
-# 1) Preparar todo (una sola vez)
-powershell -ExecutionPolicy Bypass -File scripts\instalar.ps1
+# 1) Preparar todo (una sola vez) — doble clic a instalar.bat
+#    Instala Node y Git si faltan, clona el repo y deja todo listo.
+#    No hace falta tener NADA previo: alcanza con instalar.bat.
 
 # 2) Abrir el launcher (cada vez que quieras probar)
 powershell -ExecutionPolicy Bypass -File scripts\abrir.ps1
@@ -48,4 +49,6 @@ launcher/              UI del launcher (HTML/CSS/JS)
 scripts/               instalar / abrir / actualizar / guardar (PowerShell)
 ```
 
-> Requisitos: Node.js LTS y Git. El navegador (Chromium) lo instala `instalar.ps1`.
+> Requisitos: ninguno. `instalar.bat` instala Node y Git si faltan (winget o, si no
+> hay, versión portable sin admin), clona el repo y el navegador (Chromium) lo
+> instala `instalar.ps1`.
